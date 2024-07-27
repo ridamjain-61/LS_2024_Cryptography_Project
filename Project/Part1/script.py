@@ -55,7 +55,7 @@ else:
     print("Key Discovery.")
     print("Enter the Plain Text:")
     text=input()
-
+    text=text[:9].upper()
     array_p=np.zeros((3,int(len(text)/3)),dtype=int)
     for i in range(len(text)):
         array_p[i%3][int(i/3)]=ord(text[i])
@@ -64,6 +64,7 @@ else:
     # print(array_p)
     print("Enter the Cipher Text:")
     cipher=input()
+    cipher=cipher[:9].upper()
 
     array_c=np.zeros((3,int(len(cipher)/3)),dtype=int)
     for i in range(len(cipher)):
