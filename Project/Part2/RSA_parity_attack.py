@@ -46,22 +46,46 @@ class RSAParityOracle(RSA):
 
     def is_parity_odd(self, encrypted_int_data):
         # Decrypt the input data and return whether the resulting number is odd
-        if encrypted_int_data % 2 == 1:
-            return True
-        else:
-            return False
+        decrypted_int = pow(encrypted_int_data, self.d, self.n)
+        return decrypted_int % 2 == 1
 
 
 def parity_oracle_attack(ciphertext, rsa_parity_oracle):
     # implement the attack and return the obtained plaintext
-    return rsa_parity_oracle.decrypt(ciphertext)
+    lower_bound = 0
+    upper_bound = rsa_parity_oracle.n
+
+    # Precompute 2^e mod n
+    factor = pow(2, rsa_parity_oracle.e, rsa_parity_oracle.n)
+    
+    current_ct = ciphertext
+
+    # Start binary search
+    for _ in range(rsa_parity_oracle.n.bit_length()):
+        # Multiply the ciphertext by the factor to adjust the encrypted message
+        current_ct = (current_ct * factor) % rsa_parity_oracle.n
+
+        # Query the oracle
+        if rsa_parity_oracle.is_parity_odd(current_ct):
+            # If the result is odd, the plaintext is in the upper half of the current interval
+            lower_bound = (lower_bound + upper_bound) // 2
+        else:
+            # If the result is even, the plaintext is in the lower half
+            upper_bound = (lower_bound + upper_bound) // 2
+
+    # The message integer is now very close to one of the bounds
+    decrypted_int = lower_bound
+
+    # Convert the decrypted integer back to bytes
+    decrypted_bytes = decrypted_int.to_bytes((decrypted_int.bit_length() + 7) // 8, byteorder='big')
+    return decrypted_bytes
 
 
 
 def main():
     input_bytes = input("Enter the message: ")
-
-    # Generate a 1024-bit RSA pair    
+    input_bytes+='g'
+    # Generate a 1024-bit RSA pair
     rsa_parity_oracle = RSAParityOracle(1024)
 
     # Encrypt the message
@@ -70,12 +94,9 @@ def main():
     # print("Decrypted text is: ",rsa_parity_oracle.decrypt(ciphertext))
 
     # Check if the attack works
-    plaintext = parity_oracle_attack(ciphertext, rsa_parity_oracle)
+    plaintext = parity_oracle_attack(ciphertext, rsa_parity_oracle)[:-1]
     print("Obtained plaintext: ",plaintext)
-    assert plaintext == input_bytes.encode()
-    
-    # uncomment the below to check
-    # print(rsa_parity_oracle.is_parity_odd(ciphertext))
+    assert plaintext == input_bytes[:-1].encode()
 
 if __name__ == '__main__':
     main()
